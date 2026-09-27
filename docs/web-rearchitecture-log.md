@@ -20,6 +20,65 @@ Rule:
   - ...
 ```
 
+## 2026-09-27 12:07 KST
+- Objective: Make the Projects header row highlight and reveal its More options button only on hover.
+- Files changed: `web/frontend/src/styles/_projects.scss`.
+- Changes: Added the same soft hover background used by project rows; hid the header action by default and revealed it on header hover. The trigger stays visible while its menu is open and remains keyboard reachable through focus-visible styling.
+- Validation: `npm run build` passed; style tests 11/11 passed; `git diff --check` passed.
+- Next step: Confirm hover and mouse-leave behavior in the running Web UI.
+
+## 2026-09-27 12:02 KST
+- Objective: Match the Projects header More options menu to the project-row menu shown in the reference screenshots.
+- Files changed: `web/frontend/src/features/app/components/SidebarProjectsPanel.tsx`.
+- Changes: Render the header menu through the same `project-context-menu` and `project-context-menu-item` classes as project rows, position it next to the trigger through a body portal so the sidebar cannot clip it, and keep outside-click/Escape dismissal working for the portal and trigger.
+- Validation: Sidebar rendering tests 15/15 passed; `npm run build`, focused ESLint, and `git diff --check` passed.
+- Next step: Visually confirm the Projects header menu and Add Project action in the running app.
+
+## 2026-09-27 11:55 KST
+- Objective: Fix the blank screen after Web sign in in the current project-management changes.
+- Files changed: `web/frontend/src/features/app/components/SidebarProjectsPanel.tsx`, `web/frontend/src/features/app/components/__tests__/SidebarProjectsPanel.test.ts`, `web/frontend/src/features/common/components/Icons.tsx`, `web/frontend/src/styles/_projects.scss`, `web/frontend/vite.config.js`.
+- Changes: Removed an undefined `React.useState` call in project rows and the hook inside the dynamic session-row loop. Restored CSS hover behavior, removed an unused duplicate icon binding, attached the project-menu outside-click ref to its containing DOM element, and restored the Vite base path required by the server's `/assets` mount.
+- Validation: `npm run build` passed; the built HTML points to `/assets/assets/` files. All 15 sidebar rendering tests passed. Full frontend run: 63 passed, 6 failed in existing unrelated areas. `git diff --check` passed. The broader Python Web test run did not finish and was stopped.
+- Next step: Reload the running Web app and verify sign in plus the project menu in a browser. Investigate the six existing frontend test failures separately.
+
+## 2026-09-27 (local)
+- Objective:
+  - Add project management (add/remove) functionality to Web UI
+  - "Projects ∨" dropdown in Projects section header (next to the collapsible chevron) with "Add Project" option
+  - Project context menu: add "Open in Explorer" and "Remove" options
+  - Fix hover visibility of action buttons (More options, New chat) on project rows
+- Files changed:
+  - `utils/config.py` - Added `remove_project_profile` function
+  - `web/routes.py` - Added `DELETE /api/projects/{project_key}` route
+  - `web/frontend/src/features/app/components/ProjectModals.tsx` - Added `AddProjectModal` component
+  - `web/frontend/src/features/app/components/SidebarHeaderActions.tsx` - Removed Projects dropdown (moved to Projects section)
+  - `web/frontend/src/features/app/components/SidebarProjectsPanel.tsx` - Added Projects dropdown in section header with Add Project; Added Remove option in context menu; Added React hover state for action buttons
+  - `web/frontend/src/features/app/containers/AppSidebarContainer.tsx` - Added handlers for add/remove project, passes onOpenAddProjectModal to SidebarProjectsPanel
+  - `web/frontend/src/features/common/components/Icons.tsx` - Added `PlusIcon`, `ChevronDownIcon`, `TrashIcon`
+  - `web/frontend/src/styles/_projects.scss` - Added styles for projects header dropdown and add project modal
+  - `web/frontend/src/features/app/hooks/useAppRuntimePresentation.tsx` - Exposed `loadProjects` in runtime context
+- Changes:
+  - Backend: `remove_project_profile(key)` removes project from conf.toml with validation (cannot remove active project)
+  - Backend: `DELETE /api/projects/{project_key}` endpoint calls remove and reloads config
+  - Frontend: Projects dropdown integrated into Projects section header (next to "Projects" label) with "Add Project" menu item
+  - Frontend: AddProjectModal with key/name/path fields, validation, and error handling
+  - Frontend: Project context menu now includes "Remove" alongside "Open in Explorer"
+  - Frontend: Icon exports for PlusIcon, ChevronDownIcon, TrashIcon
+  - Frontend: After add/remove project, calls `loadProjects()` to refresh project list without page reload
+  - Frontend: Fixed hover visibility of action buttons using React state + inline styles (bypasses Lightning CSS selector merging issue)
+- Validation:
+  - `cd web/frontend && npm run build`: pass (2140 modules, CSS 82.83 kB, JS 470.95 kB)
+  - `python3 -m pytest -q`: 189 passed, 2 failed (pre-existing failures unrelated to changes)
+  - Manual test of `remove_project_profile`: works correctly, protects active project
+- Next step:
+  - Verify in browser: Projects dropdown in section header opens, Add Project modal works, context menu shows Remove option
+  - Test adding new project and removing existing project
+  - Verify project list refreshes automatically after add/remove
+  - Verify action buttons appear on hover of project rows and session headers
+  - Test that active project cannot be removed
+
+## 2026-06-16 (local)
+
 ## 2026-06-16 (local)
 - Objective:
   - Workspace panel을 `.main` 내부 `.workspace-layout`에서 `.app` flex 레벨의 오른쪽 사이드바로 분리. 왼쪽 사이드바와 동일한 구조로 독립된 `workspace-right-sidebar` 생성.

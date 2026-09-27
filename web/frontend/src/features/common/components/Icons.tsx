@@ -22,6 +22,7 @@ import {
   Square,
   SquarePen,
   Sun,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -110,4 +111,12 @@ export function ComposeIcon() {
 
 export function CheckIcon() {
   return <Check {...iconProps} />;
+}
+
+export function PlusIcon() {
+  return <Plus {...iconProps} />;
+}
+
+export function TrashIcon() {
+  return <Trash2 {...iconProps} />;
 }

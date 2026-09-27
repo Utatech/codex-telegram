@@ -3,14 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { useClickOutsideAndEscape } from "../../common/hooks/useClickOutsideAndEscape";
 
 import CollapsibleSection from "../../common/components/CollapsibleSection";
-import { ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, MoreIcon } from "../../common/components/Icons";
+import { ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, MoreIcon, TrashIcon, PlusIcon } from "../../common/components/Icons";
 import { IconButton } from "../../common/components/ui";
 import { normalizeThreadId } from "../../common/utils";
+import { cn } from "../../common/components/ui/cn";
 import type { ProjectRow, ProjectSessionRow } from "../state/projectRows.js";
 
 function ProjectBaseRowItem({ row, interactionBusy, onSelectProject, onMoreClick }) {
   return (
-    <div className="project-flat-item">
+    <div className="project-flat-item project-row">
       <div className="project-name-group">
         <button
           type="button"
@@ -58,6 +59,8 @@ export default function SidebarProjectsPanel({
   onCloseThread,
   onAddThread,
   onOpenInExplorer,
+  onRemoveProject,
+  onOpenAddProjectModal,
 }: {
   projectRows: ProjectRow[];
   activeThread: string;
@@ -71,6 +74,8 @@ export default function SidebarProjectsPanel({
   onCloseThread: (projectTabId: string, threadId: string) => void;
   onAddThread: (projectTabId: string) => void;
   onOpenInExplorer: (projectKey: string) => void;
+  onRemoveProject: (projectKey: string) => void;
+  onOpenAddProjectModal: () => void;
 }) {
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(() => {
     const s = new Set<string>();
@@ -96,6 +101,14 @@ export default function SidebarProjectsPanel({
     )
   );
   const [xButtonSessions, setXButtonSessions] = useState<Set<string>>(new Set());
+
+  // Projects dropdown state
+  const [projectsDropdownOpen, setProjectsDropdownOpen] = useState(false);
+  const projectsDropdownRef = useRef<HTMLDivElement>(null);
+  const projectsDropdownMenuRef = useRef<HTMLDivElement>(null);
+  const [projectsDropdownPosition, setProjectsDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useClickOutsideAndEscape(projectsDropdownMenuRef, () => setProjectsDropdownOpen(false), projectsDropdownOpen, projectsDropdownRef);
 
   // Context menu state
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
@@ -184,6 +197,38 @@ export default function SidebarProjectsPanel({
     onOpenInExplorer(menuProjectKey);
   };
 
+  const handleRemoveProject = () => {
+    if (!menuProjectKey) return;
+    setOpenMenuKey(null);
+    onRemoveProject(menuProjectKey);
+  };
+
+  const handleAddProject = () => {
+    setProjectsDropdownOpen(false);
+    onOpenAddProjectModal();
+  };
+
+  const handleProjectsMenuClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setProjectsDropdownPosition({ top: rect.bottom + 4, left: rect.left });
+    setProjectsDropdownOpen((prev) => !prev);
+  };
+
+  const projectsDropdown = (
+    <div ref={projectsDropdownRef} className="projects-header-dropdown">
+      <IconButton
+        className="project-action-btn"
+        onClick={handleProjectsMenuClick}
+        aria-expanded={projectsDropdownOpen}
+        aria-haspopup="true"
+        aria-label="More options"
+        title="More options"
+      >
+        <MoreIcon />
+      </IconButton>
+    </div>
+  );
+
   return (
     <>
       <CollapsibleSection
@@ -195,9 +240,12 @@ export default function SidebarProjectsPanel({
         chevronClassName="projects-toggle-chevron"
         listClassName="project-flat-list"
         headerActions={
-          interactionBusy ? (
-            <span className="projects-busy-note">Switch unavailable while running</span>
-          ) : null
+          <>
+            {projectsDropdown}
+            {interactionBusy ? (
+              <span className="projects-busy-note">Switch unavailable while running</span>
+            ) : null}
+          </>
         }
       >
           {projectRows.map((row) => {
@@ -221,7 +269,7 @@ export default function SidebarProjectsPanel({
                 key={row.projectTabId}
                 className={`project-session-row state-${row.status}${row.isActive ? " active" : ""}`}
               >
-                <div className="project-session-header">
+                <div className="project-session-header project-row">
                   <div className="project-name-group">
                     <button
                       type="button"
@@ -336,6 +384,28 @@ export default function SidebarProjectsPanel({
           ) : null}
       </CollapsibleSection>
 
+      {projectsDropdownOpen && projectsDropdownPosition
+        ? createPortal(
+            <div
+              ref={projectsDropdownMenuRef}
+              className="project-context-menu"
+              role="menu"
+              style={{ top: projectsDropdownPosition.top, left: projectsDropdownPosition.left }}
+            >
+              <button
+                type="button"
+                className="ui-icon-button project-context-menu-item"
+                role="menuitem"
+                onClick={handleAddProject}
+              >
+                <PlusIcon />
+                <span>Add Project</span>
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
+
       {openMenuKey && menuPosition
         ? createPortal(
             <div
@@ -345,11 +415,19 @@ export default function SidebarProjectsPanel({
             >
               <button
                 type="button"
-                className="project-context-menu-item"
+                className={cn("ui-icon-button", "project-context-menu-item")}
                 onClick={handleOpenInExplorer}
               >
                 <FolderIcon open={true} />
                 <span>Open in Explorer</span>
+              </button>
+              <button
+                type="button"
+                className={cn("ui-icon-button", "project-context-menu-item")}
+                onClick={handleRemoveProject}
+              >
+                <TrashIcon />
+                <span>Remove</span>
               </button>
             </div>,
             document.body,

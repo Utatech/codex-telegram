@@ -21,6 +21,8 @@ const BASE_PROPS = {
   onCloseThread: NOOP,
   onAddThread: NOOP,
   onOpenInExplorer: NOOP,
+  onRemoveProject: NOOP,
+  onOpenAddProjectModal: NOOP,
 };
 
 test("Telegram-connected open thread renders a T badge before its title", () => {

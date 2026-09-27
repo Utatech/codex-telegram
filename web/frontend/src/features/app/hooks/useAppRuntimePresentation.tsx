@@ -236,6 +236,7 @@ export default function useAppRuntimePresentation(args) {
         selectThread,
         closeThread,
         startThread,
+        loadProjects: threadActions.loadProjects,
       },
       projectPicker: {
         closeProjectModeModal: projectPicker.closeProjectModeModal,

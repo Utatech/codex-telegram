@@ -712,3 +712,40 @@ def save_project_profile(key: str, name: str, path: str) -> None:
     )
 
     config_path.write_text(updated, encoding="utf-8")
+
+
+def remove_project_profile(key: str) -> None:
+    _ensure_config_exists()
+    config_path = _get_config_path()
+    raw = config_path.read_text(encoding="utf-8")
+    parsed = tomllib.loads(raw) if raw.strip() else {}
+
+    projects = parsed.get("projects")
+    if not isinstance(projects, dict) or key not in projects:
+        raise ValueError(f"Project key '{key}' not found.")
+
+    if parsed.get("project") == key:
+        raise ValueError(f"Cannot remove the active project '{key}'. Switch to another project first.")
+
+    lines = raw.splitlines(keepends=True)
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if stripped == f"[projects.{key}]":
+            i += 1
+            while i < len(lines):
+                next_line = lines[i]
+                next_stripped = next_line.strip()
+                if next_stripped.startswith("[") and not next_stripped.startswith("[projects."):
+                    break
+                if next_stripped.startswith("[projects.") and next_stripped != f"[projects.{key}]":
+                    break
+                i += 1
+            continue
+        result.append(line)
+        i += 1
+
+    updated = "".join(result).rstrip() + "\n"
+    config_path.write_text(updated, encoding="utf-8")

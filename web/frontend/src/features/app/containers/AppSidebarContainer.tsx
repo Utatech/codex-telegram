@@ -1,11 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AppSidebarFrame from "../components/AppSidebarFrame";
 import SidebarAgentsPanel from "../components/SidebarAgentsPanel";
 import SidebarHeaderActions from "../components/SidebarHeaderActions";
 import SidebarProjectsPanel from "../components/SidebarProjectsPanel";
 import SidebarThreadsPanel from "../components/SidebarThreadsPanel";
+import { AddProjectModal } from "../components/ProjectModals";
 import { createOpenExplorerPayload } from "../state/projectExplorer.js";
 import { buildProjectRows } from "../state/projectRows.js";
+import { api } from "../../../shared/api/httpClient";
 import {
   useAppDomainsContext,
   useAppPresentationContext,
@@ -80,6 +82,7 @@ type SidebarRuntime = {
     selectThread: Callback;
     closeThread: Callback;
     startThread: Callback;
+    loadProjects: AsyncCallback;
   };
 };
 
@@ -107,12 +110,36 @@ export default function AppSidebarContainer() {
   const { agent, thread } = useAppRuntimeContext<SidebarRuntime>();
   const { shell, sidebar } = useAppPresentationContext<SidebarPresentation>();
 
+  const [addProjectModalOpen, setAddProjectModalOpen] = useState(false);
+
   useEffect(() => {
     const agents = (session.sessionSummary as { agents?: { name: string }[] } | null)?.agents || [];
     if (agents.some((a) => a.name === "guardian") && !session.activeAgentSettings) {
       agent.openAgentSettings("guardian");
     }
   }, [session.sessionSummary, session.activeAgentSettings, agent.openAgentSettings]);
+
+  const handleOpenAddProjectModal = () => {
+    setAddProjectModalOpen(true);
+  };
+
+  const handleAddProject = async () => {
+    try {
+      await thread.loadProjects();
+      setAddProjectModalOpen(false);
+    } catch {
+      // Error handling is done in the modal
+    }
+  };
+
+  const handleRemoveProject = async (projectKey: string) => {
+    try {
+      await api(`/api/projects/${projectKey}`, { method: "DELETE" });
+      await thread.loadProjects();
+    } catch (err) {
+      console.error("Failed to remove project:", err);
+    }
+  };
 
   return (
     <AppSidebarFrame
@@ -181,6 +208,8 @@ export default function AppSidebarContainer() {
             body: JSON.stringify(createOpenExplorerPayload(projectKey)),
           }).catch(() => {})
         }
+        onRemoveProject={handleRemoveProject}
+        onOpenAddProjectModal={handleOpenAddProjectModal}
       />
       <SidebarThreadsPanel
         activeProjectTabId={threads.activeProjectTabId}
@@ -191,6 +220,11 @@ export default function AppSidebarContainer() {
         onCloseThread={thread.closeThread}
         onAddThread={thread.startThread}
         disableAddThread={!threads.activeProjectKey || sidebar.interactionBusy}
+      />
+      <AddProjectModal
+        isOpen={addProjectModalOpen}
+        onClose={() => setAddProjectModalOpen(false)}
+        onAddProject={handleAddProject}
       />
     </AppSidebarFrame>
   );

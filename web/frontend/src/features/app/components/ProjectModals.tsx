@@ -1,4 +1,6 @@
+import React from "react";
 import { Badge, Button, EmptyState, Input, Modal } from "../../common/components/ui";
+import { api } from "../../../shared/api/httpClient";
 
 export function ProjectModeModal({ isOpen, onClose, onChooseProjectClickMode }) {
   return (
@@ -92,6 +94,86 @@ export function ProjectPickerModal({
           <kbd>Esc</kbd> Close
         </span>
       </div>
+    </Modal>
+  );
+}
+
+export function AddProjectModal({ isOpen, onClose, onAddProject }) {
+  const [key, setKey] = React.useState("");
+  const [name, setName] = React.useState("");
+  const [path, setPath] = React.useState("");
+  const [error, setError] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      await api("/api/projects", {
+        method: "POST",
+        body: JSON.stringify({ key, name, path }),
+      });
+      onAddProject();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add project");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabel="Add project" title="Add Project">
+      <form onSubmit={handleSubmit}>
+        <div className="modal-field">
+          <label htmlFor="project-key">Key</label>
+          <Input
+            id="project-key"
+            className="add-project-input"
+            placeholder="my-project"
+            value={key}
+            onChange={(e) => setKey(e.target.value)}
+            disabled={loading}
+            autoFocus
+            required
+          />
+          <span className="modal-hint">Letters, numbers, underscore, hyphen only</span>
+        </div>
+        <div className="modal-field">
+          <label htmlFor="project-name">Name</label>
+          <Input
+            id="project-name"
+            className="add-project-input"
+            placeholder="My Project"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            disabled={loading}
+            required
+          />
+        </div>
+        <div className="modal-field">
+          <label htmlFor="project-path">Path</label>
+          <Input
+            id="project-path"
+            className="add-project-input"
+            placeholder="/absolute/path/to/project"
+            value={path}
+            onChange={(e) => setPath(e.target.value)}
+            disabled={loading}
+            required
+          />
+        </div>
+        {error && <div className="modal-error">{error}</div>}
+        <div className="modal-actions">
+          <Button type="submit" variant="primary" disabled={loading}>
+            {loading ? "Adding..." : "Add Project"}
+          </Button>
+          <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

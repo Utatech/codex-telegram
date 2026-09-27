@@ -16,7 +16,7 @@ from codex_telegram import __version__
 from codex.collaboration_mode import codex_mode_name
 from models import state
 from models.user import user_manager
-from utils.config import get, get_web_password, reload, save_project_profile
+from utils.config import get, get_web_password, reload, remove_project_profile, save_project_profile
 from utils.local_command import resolve_command_cwd
 from utils.normalize import clamp_int, parse_bool
 from web.dependencies import (
@@ -693,6 +693,16 @@ def register_project_routes(app: FastAPI) -> None:
         path = _required_str(payload, "path")
         try:
             save_project_profile(key, name, path)
+            reload()
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return await route_command("/projects", ["--list"], session.user_id)
+
+    @app.delete("/api/projects/{project_key}")
+    async def remove_project(project_key: str, request: Request) -> dict[str, Any]:
+        session = await session_from_request(request)
+        try:
+            remove_project_profile(project_key)
             reload()
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
